@@ -1,0 +1,21 @@
+name: nst_strength_control
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python
+  - numpy
+  - einops
+  - tqdm
+  - rich
+  - pip
+  - pytorch
+  - torchvision
+  # - pytorch-cuda=12.1 #NOTE: for older GPUs use appropriate version
+  - torchfile
+  - scipy
+  - pillow
+  - imageio
+  - matplotlib
+  - jupyter
