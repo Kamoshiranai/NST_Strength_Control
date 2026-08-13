@@ -1,6 +1,2 @@
 .vscode
 __pycache__
-images/output/deepfeaturesynthesis/*
-images/output/gatysnst/*
-images/output/sanet/*
-images/output/urst/*

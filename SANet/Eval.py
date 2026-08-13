@@ -2,14 +2,13 @@ import argparse
 import os
 import torch
 import torch.nn as nn
-from torchvision.transforms.functional import InterpolationMode
 import numpy as np
 import PIL as pil
 from os.path import basename
 from os.path import splitext
 from torchvision import transforms
 from torchvision.utils import save_image
-from einops import repeat, rearrange, pack
+from einops import repeat, rearrange
 import sys
 sys.path.append("..")
 from utils import resize_scalar_field, receptive_resize_scalar_field, minpool_resize_scalar_field, resize_to_max_size, LuminanceRemapper
@@ -270,7 +269,7 @@ if args.content_size is not None:
 else:
     max_content_size = max(content_image.size[0], content_image.size[1])
 
-content_image = resize_to_max_size(content_image, max_content_size, multiple_of_8=True) # NOTE: content sizes need to be multiple of 8 to be able to combine content color and output luminance channels
+content_image = resize_to_max_size(content_image, max_content_size)
 style_image = resize_to_max_size(style_image, max_style_size)
 if args.second_style != "":
     second_style_image = resize_to_max_size(second_style_image, max_style_size)
@@ -299,7 +298,7 @@ if args.second_style != "":
 
 if args.scalar_field != "":
     scalar_field_image = scalar_field_image.convert("L")
-    scalar_field = transforms.ToTensor()(scalar_field_image) #NOTE: has shape (C, H, W)
+    scalar_field = transforms.ToTensor()(scalar_field_image) #NOTE: has shape (1, H, W)
 
     # normalize scalar field
     if args.content_mask != "":
@@ -310,13 +309,18 @@ if args.scalar_field != "":
     else:
         scalar_field = (scalar_field - scalar_field.min()) / (scalar_field.max() - scalar_field.min())
 
-    # resize scalar field to size of relu4_1
+    # add batch dim
+    scalar_field = rearrange(scalar_field, "1 h w -> 1 1 h w")
+
+    # downsample scalar field to size of relu4_1 with chosen method
     if args.downsampling_type == "receptive":
-        scalar_field_relu4_1 = receptive_resize_scalar_field(scalar_field, ["r41"], use_relu=args.downsampling_use_relu)[0]
+        scalar_field_relu4_1 = receptive_resize_scalar_field(scalar_field, ["r41"], use_relu=args.downsampling_use_relu, ceil_mode = True)[0]
     elif args.downsampling_type == "minpool":
-        scalar_field_relu4_1 = minpool_resize_scalar_field(scalar_field, ["r41"], use_relu=args.downsampling_use_relu)[0]
+        scalar_field_relu4_1 = minpool_resize_scalar_field(scalar_field, ["r41"], use_relu=args.downsampling_use_relu, ceil_mode = True)[0]
     elif args.downsampling_type == "bilinear":
-        scalar_field_relu4_1 = resize_scalar_field(scalar_field, ["r41"])[0]
+        scalar_field_relu4_1 = resize_scalar_field(scalar_field, ["r41"], ceil_mode = True)[0]
+    else:
+        raise ValueError(f"Unknown downsampling type = {args.downsampling_type}, use one of ['minpool', 'receptive', 'bilinear']")
 
     scalar_field_relu4_1 = scalar_field_relu4_1.to(device)
 
@@ -345,10 +349,11 @@ with torch.no_grad():
         Fm_ccc = transform(Content4_1, Content4_1, Content5_1, Content5_1)
 
         style_strength = args.strength
+        # NOTE: interpolate stylized features with content features according to scalar field
         if args.scalar_field != "":
             style_strength = 1.0
             scalar_field_relu4_1 *= style_strength
-            scalar_field_relu4_1 = repeat(scalar_field_relu4_1, "1 h w -> b c h w", b = Fm_csc.shape[0], c=Fm_csc.shape[1])
+            scalar_field_relu4_1 = repeat(scalar_field_relu4_1, "1 1 h w -> b c h w", b = Fm_csc.shape[0], c=Fm_csc.shape[1])
             new_Fm_csc = scalar_field_relu4_1 * Fm_csc + (1.0 - scalar_field_relu4_1) * Fm_ccc
 
         elif args.second_style != "":

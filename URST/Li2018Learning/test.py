@@ -65,18 +65,22 @@ def style_transfer_high_resolution(patches, scalar_field_patches, sF, padding, s
             feature = matrix(content_feature, style_feature)
 
         if args.scalar_field != "":
-            #NOTE: resize scalar field to fit dimensions of feature space like relu 4_1
+            # Downsample scalar field via chosen method
+            scalar_field_patch = einops.rearrange(scalar_field_patches[patch_idx], "1 h w -> 1 1 h w")
             if args.downsampling_type == "bilinear":
-                scalar_field_patch = resize_scalar_field(scalar_field_patches[patch_idx], [args.layer])[0]
+                scalar_field_patch = resize_scalar_field(scalar_field_patch, [args.layer])[0]
             elif args.downsampling_type == "minpool":
-                scalar_field_patch = minpool_resize_scalar_field(scalar_field_patches[patch_idx], [args.layer], use_relu = args.downsampling_use_relu)[0]
+                scalar_field_patch = minpool_resize_scalar_field(scalar_field_patch, [args.layer], use_relu = args.downsampling_use_relu)[0]
             elif args.downsampling_type == "receptive":
-                scalar_field_patch = receptive_resize_scalar_field(scalar_field_patches[patch_idx], [args.layer], use_relu = args.downsampling_use_relu)[0]
-            scalar_field_patch = einops.repeat(scalar_field_patch, "1 h w -> c h w", c=feature.shape[1])
-            scalar_field_patch = einops.repeat(scalar_field_patch, "c h w -> b c h w", b = feature.shape[0]) # add batch dim
+                scalar_field_patch = receptive_resize_scalar_field(scalar_field_patch, [args.layer], use_relu = args.downsampling_use_relu)[0]
+            else:
+                raise ValueError(f"Unknown downsampling type = {args.downsampling_type}, use one of ['minpool', 'receptive', 'bilinear']")
+
+            # resize scalar field to fit dimensions of feature space like relu 4_1
+            scalar_field_patch = einops.repeat(scalar_field_patch, "1 1 h w -> b c h w", b = feature.shape[0], c = feature.shape[1])
             scalar_field_patch = scalar_field_patch.to(device)
 
-            #NOTE: interpolate using the scalar field, cut to this patch
+            # interpolate features patch using the scalar field patch
             feature = scalar_field_patch * feature + (1.0 - scalar_field_patch) * content_feature
         
         stylized = dec(feature)
@@ -141,12 +145,12 @@ if __name__ == '__main__':
                         help='which features to transfer, either r31 or r41')
     parser.add_argument('--patch_size', type=int, default=1000, help='patch size') #NOTE: might need to make sure that patchsize is a mutiple of 8 (else their size gets changed via encoding + decoding, meaning luminance remapping and scalar field downsampling wont work)
     parser.add_argument('--thumb_size', type=int, default=1024, help='thumbnail size')
-    parser.add_argument('--style_size', type=int, default=512, help='style size') #NOTE: resize + crop to square, style image to this size
+    parser.add_argument('--style_size', type=int, default=512, help='style size') #NOTE: if given, resizes max dimension of style to this size
     parser.add_argument('--padding', type=int, default=32, help='padding')
     parser.add_argument('--test_speed', action="store_true", help='test the speed')
     parser.add_argument('--URST', action="store_true", help='use URST framework')
     parser.add_argument("--device", type=str, default="cuda", help="device")
-    parser.add_argument('--content_size', type=int, default=0, help='content_size') #NOTE: if given, resizes content to this resolution
+    parser.add_argument('--content_size', type=int, default=0, help='content_size') #NOTE: if given, resizes max dimension of content to this size
 
     parser.add_argument('--no_style', action="store_true", help='do not stylize content') #NOTE: just pipe content through encoder + decoder without style
     parser.add_argument('--no_remap_colors', action="store_true", help='do not remap colors')
@@ -189,24 +193,26 @@ if __name__ == '__main__':
     PADDING = args.padding
     
     content_tf = test_transform(0, False)
-    style_tf = test_transform(args.style_size, True)
+    style_tf = test_transform(0, False)
+    # style_tf = test_transform(args.style_size, True) # resize style image and crop to square
 
     repeat = 15 if args.test_speed else 1
     time_list = []
 
     for i in range(repeat):
         content_image = Image.open(args.content).convert("RGB")
+        style_image = Image.open(args.style)
         if args.content_size != 0:
-            content_image = content_image.resize((args.content_size, args.content_size))
+            max_content_size = args.content_size
+            content_image = resize_to_max_size(content_image, max_content_size)
 
-        #NOTE: need to make sure content size is a multiple of 8 for luminance remapping and scalar field downsampling with a network to work
-        if args.scalar_field != "" or not args.no_remap_colors:
-            max_content_size = max(content_image.size[0], content_image.size[1])
-            content_image = resize_to_max_size(content_image, max_content_size, multiple_of_8=True)
+        max_style_size = args.style_size
+        style_image = resize_to_max_size(style_image, max_style_size)
 
         if args.scalar_field != "":
             scalar_field_image = Image.open(args.scalar_field).convert("L")
             scalar_field_image = scalar_field_image.resize(content_image.size)
+
         if args.content_mask != "":
             content_mask_image = Image.open(args.content_mask).convert("L")
             content_mask_image = content_mask_image.resize(content_image.size)
@@ -216,11 +222,11 @@ if __name__ == '__main__':
         IMAGE_WIDTH, IMAGE_HEIGHT = content_image.size
         if args.print:
             print("image size:", content_image.size)
-        style_image = Image.open(args.style)
 
         if not args.no_remap_colors:
             #NOTE: luminance remapping
             color_remapper = LuminanceRemapper(content_image, content_mask = content_mask)
+            # shift luminance of style image to fit luminance of content image
             style_image = color_remapper.shift(style_image)
 
         torch.cuda.synchronize()
@@ -253,6 +259,8 @@ if __name__ == '__main__':
             with torch.no_grad():
                 sF = vgg(style)
                 save_name = f"{splitext(basename(args.content))[0]}"
+                if args.content_size != 0:
+                    save_name += f"_size={args.content_size}"
                 if args.no_style:
                     save_name += "_no_style"
                 else:
