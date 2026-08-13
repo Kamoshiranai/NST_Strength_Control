@@ -2,6 +2,8 @@
 
 This repository contains code for the paper [Neural Style Transfer for Data Encoding Using Strength Control](TODO: add link). We propose downsampling and masking techniques to achieve spatial control of style strength while preserving existing color encodings via luminance-only style transfer. This method can be used to encode an additional scalar field as style strength.
 
+![Alt text](teaser.jpg)
+
 ## Setup
 
 ### 1. Clone the repository
@@ -73,6 +75,8 @@ python create_scalar_fields.py \
 ```
 
 > Check the `--help` output of each script for additional arguments controlling the downsampling strategy, color remapping, content and style size, etc.
+
+![Alt text](example.png)
 
 ## Repository Structure and Third-Party Code
 
