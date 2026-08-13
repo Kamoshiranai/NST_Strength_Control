@@ -58,9 +58,9 @@ Ultra-high-resolution style transfer. Includes our proposed downsampling and mas
 cd URST/Li2018Learning
 python test.py \
     --URST \
-    --content ../images/content/<content_image> \
-    --style ../images/styles/<style_image> \
-    --scalar_field ../images/scalar_fields/<scalar_field_image>
+    --content ../../images/content/<content_image> \
+    --style ../../images/styles/<style_image> \
+    --scalar_field ../../images/scalar_fields/<scalar_field_image>
 ```
 
 ### Create example scalar fields using `create_scalar_fields.py`
