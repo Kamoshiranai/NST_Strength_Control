@@ -1,6 +1,6 @@
 # Neural Style Transfer for Data Encoding Using Strength Control
 
-This repository contains code for the paper [Neural Style Transfer for Data Encoding Using Strength Control](TODO: add link). We propose downsampling and masking techniques to achieve spatial control of style strength while preserving existing color encodings via luminance-only style transfer. This method can be used to encode an additional scalar field as style strength.
+This repository contains code for the paper [Neural Style Transfer for Data Encoding Using Strength Control](https://diglib.eg.org/bitstream/handle/10.2312/vmv20261014/vmv20261014.pdf). We propose downsampling and masking techniques to achieve spatial control of style strength while preserving existing color encodings via luminance-only style transfer. This method can be used to encode an additional scalar field as style strength.
 
 ![Alt text](teaser.jpg)
 
