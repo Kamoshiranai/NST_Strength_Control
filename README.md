@@ -1,6 +1,6 @@
 # Neural Style Transfer for Data Encoding Using Strength Control
 
-This repository contains code for the paper [Neural Style Transfer for Data Encoding Using Strength Control](https://diglib.eg.org/bitstream/handle/10.2312/vmv20261014/vmv20261014.pdf). We propose downsampling and masking techniques to achieve spatial control of style strength while preserving existing color encodings via luminance-only style transfer. This method can be used to encode an additional scalar field as style strength.
+This repository contains code for the paper [Neural Style Transfer for Data Encoding Using Strength Control](https://diglib.eg.org/handle/10.2312/vmv20261014). We propose downsampling and masking techniques to achieve spatial control of style strength while preserving existing color encodings via luminance-only style transfer. This method can be used to encode an additional scalar field as style strength.
 
 ![Alt text](teaser.jpg)
 
@@ -97,14 +97,16 @@ See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full attribution detail
 Thanks to the authors of PytorchNeuralStyleTransfer, SANET, URST, and LinearStyleTransfer for releasing their code.
 
 ## Citation
-#TODO
 
 ```
-@inproceedings{NST_for_data_encoding_using_strength_control
-booktitle = {Vision, Modeling, and Visualization},
+@inproceedings{10.2312:vmv.20261014,
+booktitle = {Vision, Modeling, and Visualization (VMV)},
+editor = {Leimkühler, Thomas and Weinkauf, Tino and Campen, Marcel},
 title = {{Neural Style Transfer for Data Encoding Using Strength Control}},
-author = {Merk Niklas and Sterzik Anna and Lawonn Kai},
+author = {Merk, Niklas and Sterzik, Anna and Lawonn, Kai},
 year = {2026},
 publisher = {The Eurographics Association},
+ISBN = {978-3-03868-318-6},
+DOI = {10.2312/vmv.20261014}
 }
 ```
